@@ -1,6 +1,7 @@
 .DS_Store
 Thumbs.db
 *.log
-/db.json
+db.json
 public/
 .deploy*/
+hexo-dir/
