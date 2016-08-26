@@ -14,8 +14,14 @@
 # modules: 48
 # openssl: 1.0.2h
 
+# git
+npm install hexo-deployer-git --save
+
 # RSS
 npm install hexo-generator-feed --save
 
 # Local Search
 npm install hexo-generator-search --save
+
+# force push
+#git push -u https://github.com/ztyoung86/ztyoung86.github.io.git HEAD:hexo --force
