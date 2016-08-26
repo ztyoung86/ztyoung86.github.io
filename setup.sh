@@ -3,6 +3,7 @@
 HEXO_DIR="hexo-dir"
 
 # init the hexo folder
+rm -rf $HEXO_DIR
 hexo init $HEXO_DIR
 cd $HEXO_DIR
 
@@ -26,6 +27,9 @@ npm install hexo-deployer-git --save
 npm install hexo-generator-feed --save
 # Local Search
 npm install hexo-generator-search --save
+
+# link deploy script
+ln -s ../deploy.sh deploy.sh
 
 # force push
 #git push -u https://github.com/ztyoung86/ztyoung86.github.io.git HEAD:hexo --force
