@@ -7,13 +7,13 @@ title: 通の脑洞
 subtitle: 世界太大，找个洞藏一下
 description:
 author: 楊小杉
-avatar: http://7fva56.com1.z0.glb.clouddn.com/myroad.jpg
-language: zh-Hans
+avatar: /images/avatar.jpg
+language: zh-CN
 timezone:
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: http://ztyoung.me
+url: http://note.ztyoung.me
 root: /
 permalink: :year/:month/:day/:title/
 permalink_defaults:

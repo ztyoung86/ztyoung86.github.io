@@ -9,7 +9,7 @@ tags:
 - 小说
 ---
 
-![](http://pic-pool.qiniudn.com/jianshu-48ee9326f02487053e4d641cfa69a0ef7943fadfed9b-mOLq0t.jpg)
+![](/images/lisa.jpg)
 
 
 　　坐在莱诺河边的公园长椅上，看着远处的夕阳，我伸了个大大的懒腰。

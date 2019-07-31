@@ -14,13 +14,15 @@ rm -rf source
 ln -s ../source source
 
 # get theme
-git clone https://github.com/ztyoung86/hexo-theme-next.git themes/next
+#git clone https://github.com/ztyoung86/hexo-theme-next.git themes/next
+git clone https://github.com/theme-next/hexo-theme-next themes/next
 
 # bakup and link config
 mv _config.yml _config.yml.bak
 ln -s ../_config.yml _config.yml
 
 # install required packages
+npm install
 ## git
 npm install hexo-deployer-git --save
 ## RSS
