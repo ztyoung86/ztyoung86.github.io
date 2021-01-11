@@ -14,8 +14,12 @@ rm -rf source
 ln -s ../source source
 
 # get theme
-#git clone https://github.com/ztyoung86/hexo-theme-next.git themes/next
-git clone https://github.com/theme-next/hexo-theme-next themes/next
+# git clone https://github.com/ztyoung86/hexo-theme-next.git themes/next
+git clone https://github.com/theme-next/hexo-theme-next.git themes/next
+mv themes/next/_config.yml themes/next/_config.yml.bak
+cd themes/next/
+ln -s ../../../_config.next.yml _config.yml
+cd ../../
 
 # bakup and link config
 mv _config.yml _config.yml.bak

@@ -6,3 +6,4 @@ public/
 .deploy*/
 
 hexo-dir/
+.vscode/
