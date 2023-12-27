@@ -1,0 +1,119 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>浅尝记</title>
+<link rel="shortcut icon" href="https://ztyoung.me/favicon.ico?v=1703673610591">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://ztyoung.me/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="浅尝记 - Atom Feed" href="https://ztyoung.me/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="I Know Nothing." />
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://ztyoung.me">
+  <img class="avatar" src="https://ztyoung.me/images/avatar.png?v=1703673610591" alt="">
+  </a>
+  <h1 class="site-title">
+    浅尝记
+  </h1>
+  <p class="site-description">
+    I Know Nothing.
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+    
+        <div class="post-container">
+  
+    <article class="post">
+      <a href="https://ztyoung.me/post/hive-recover/">
+        <h2 class="post-title">Hive 恢复 drop table 数据</h2>
+      </a>
+      <div class="post-info">
+        <span>
+          2021-04-20
+        </span>
+        <span>
+          7 min read
+        </span>
+        
+          <a href="https://ztyoung.me/tag/BfPDqgDEG/" class="post-tag">
+            # 技术
+          </a>
+        
+      </div>
+      
+      <div class="post-abstract">
+        <h2 id="前言">前言</h2>
+<p>工作中处理hive数据的时候, 没有控制好权限, 手滑执行了一条<code>drop table</code> 语句, 把一个生产环境的大表给删了. 隐藏掉心里的惊涛海浪, 我故作镇定地打开搜索引擎寻找解决方案. 天无绝人之路, 解决方案确实存在!</p>
+<p>由于hive底层实际上是依赖HDFS, <code>drop</code> 操作实际上是HDFS的一次<code>rm</code>操作, 所以利用 HDFS 的 Trash 回收站功能可以实现数据的恢复.</p>
+
+      </div>
+    </article>
+  
+</div>
+
+    
+        <div class="pagination-container">
+  
+  
+</div>
+
+    
+        <div class="site-footer">
+  <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" style="margin-right: 6">CC BY-SA 4.0</a>2023 © Albert Yang.
+  <a class="rss" href="https://ztyoung.me/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+  </body>
+</html>

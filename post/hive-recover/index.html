@@ -1,0 +1,324 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hive 恢复 drop table 数据 | 浅尝记</title>
+<link rel="shortcut icon" href="https://ztyoung.me/favicon.ico?v=1703673610591">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://ztyoung.me/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="Hive 恢复 drop table 数据 | 浅尝记 - Atom Feed" href="https://ztyoung.me/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="前言
+工作中处理hive数据的时候, 没有控制好权限, 手滑执行了一条drop table 语句, 把一个生产环境的大表给删了. 隐藏掉心里的惊涛海浪, 我故作镇定地打开搜索引擎寻找解决方案. 天无绝人之路, 解决方案确实存在!
+由于hiv..." />
+    <meta name="keywords" content="技术" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://ztyoung.me">
+  <img class="avatar" src="https://ztyoung.me/images/avatar.png?v=1703673610591" alt="">
+  </a>
+  <h1 class="site-title">
+    浅尝记
+  </h1>
+  <p class="site-description">
+    I Know Nothing.
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              Hive 恢复 drop table 数据
+            </h2>
+            <div class="post-info">
+              <span>
+                2021-04-20
+              </span>
+              <span>
+                7 min read
+              </span>
+              
+                <a href="https://ztyoung.me/tag/BfPDqgDEG/" class="post-tag">
+                  # 技术
+                </a>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content">
+                <h2 id="前言">前言</h2>
+<p>工作中处理hive数据的时候, 没有控制好权限, 手滑执行了一条<code>drop table</code> 语句, 把一个生产环境的大表给删了. 隐藏掉心里的惊涛海浪, 我故作镇定地打开搜索引擎寻找解决方案. 天无绝人之路, 解决方案确实存在!</p>
+<p>由于hive底层实际上是依赖HDFS, <code>drop</code> 操作实际上是HDFS的一次<code>rm</code>操作, 所以利用 HDFS 的 Trash 回收站功能可以实现数据的恢复.</p>
+<!-- more -->
+<p>这里需要强调一下, 数据得以恢复需要满足以下3个前提 (OS: 老子真是幸运啊~):</p>
+<ol>
+<li>HDFS 开启了Trash (回收站) 功能, 一般对于线上生产环境这是必备的;</li>
+<li>删除数据使用的是 <code>drop</code> 操作, <strong>hive 中使用truncate命令将表截断的话，它是不会进回收站的，是没办法恢复的。这个跟oracle truncate有点类似的。</strong></li>
+<li>被删除的表的建表语句有备份. 如果是 text 类型表, 有表结构即可. 但如果是分区分桶表或ORC表, 需有与原来完全一致的建表语句, 否则数据载入会有问题.</li>
+</ol>
+<h2 id="hdfs-trash功能">HDFS Trash功能</h2>
+<p>对于线上生产环境的HDFS，开启回收站功能是必不可少的。该功能类似于linux系统的回收站设计，HDFS会为每个用户创建一个专属的回收站目录（<strong>/user/${user.name}/.Trash</strong>），用户删除文件时，实际上是被移动到了回收站目录。用于预防当用户误删HDFS上的数据时，能够及时从回收站恢复这些数据。</p>
+<p>HDFS 开启 Trash 功能的配置在 <code>core-site.xml</code> 中:</p>
+<pre><code class="language-xml">&lt;name&gt;fs.trash.interval&lt;/name&gt;
+&lt;value&gt;0&lt;/value&gt;
+&lt;description&gt;Number of minutes after which the checkpoint gets deleted.  
+  If zero, the trash feature is disabled. 
+  This option may be configured both on the server and the client. 
+  If trash is disabled server side then the client side configuration is checked. 
+  If trash is enabled on the server side then the value configured on the server is used 
+  and the client configuration value is ignored.
+&lt;/description&gt;
+</code></pre>
+<p><strong>描述</strong>：单位(minute)，回收站数据判断是否需要清理的检查周期，默认值为0 (如果集群未自定义设置且<code>fs.trash.interval</code>大于0，则 <code>fs.trash.checkpoint.interval=${fs.trash.interval}</code>)</p>
+<pre><code class="language-xml">&lt;name&gt;fs.trash.checkpoint.interval&lt;/name&gt;
+&lt;value&gt;0&lt;/value&gt;
+&lt;description&gt;Number of minutes between trash checkpoints. 
+  Should be smaller or equal to fs.trash.interval. 
+  If zero, the value is set to the value of fs.trash.interval.
+  Every time the checkpointer runs it creates a new checkpoint out of current 
+  and removes checkpoints created  more than fs.trash.interval minutes ago.
+&lt;/description&gt;
+</code></pre>
+<p><strong>描述</strong>：单位(minute)，回收站数据判断是否需要清理的检查周期，默认值为0 (如果集群未自定义设置且<code>fs.trash.interval</code>大于0，则 <code>fs.trash.checkpoint.interval=${fs.trash.interval}</code>)</p>
+<h2 id="hive-表数据恢复">Hive 表数据恢复</h2>
+<p>确定 HDFS 已配置 Trash 后, 一个比较直接的想法就是使用 <code>hdfs dfs -mv</code> 将文件恢复至原来的位置即可. 实际上, 这样在 hive 中无法读取数据. 因为表被 drop 掉以后, 在mysql的元数据库中已经没有数据了，那就得需要将这些数据的信息重新写入到mysql中, 即重新建表。</p>
+<h3 id="原路径恢复">原路径恢复</h3>
+<p>将回收站中的数据 <code>cp</code> 到原位置</p>
+<pre><code class="language-bash">hdfs dfs -cp /user/hive/.Trash/Current/hive/warehouse/default.db/t_ods_order /hive/warehouse/default.db/t_ods_order
+</code></pre>
+<p>然后连接 hive 重新建表 (表结构、分区分桶以及存储格式与原来保持一致):</p>
+<pre><code class="language-sql">CREATE TABLE t_ods_order(
+  serverid decimal(10,0) DEFAULT NULL COMMENT '  ', 
+  ordersno decimal(10,0) DEFAULT NULL COMMENT '  ', 
+  orderdate decimal(10,0) DEFAULT NULL COMMENT '  ', 
+  etl_fl_nm string DEFAULT NULL COMMENT '  ', 
+  ppn_tmstamp timestamp DEFAULT NULL COMMENT '  ', 
+  busi_date DATE DEFAULT NULL COMMENT '  '
+)
+PARTITIONED BY RANGE (busi_date) ( 
+  PARTITION partition_200909 VALUES LESS THAN ('2009-10-01'), 
+  PARTITION partition_200910 VALUES LESS THAN ('2009-11-01'), 
+  PARTITION partition_200911 VALUES LESS THAN ('2009-12-01'), 
+CLUSTERED BY (serverid)
+INTO 6 BUCKETS
+STORED AS ORC
+LOCATION '/hive/warehouse/default.db/t_ods_order'
+TBLPROPERTIES (&quot;transactional&quot;=&quot;true&quot;);
+;
+</code></pre>
+<p>完成建表后数据恢复成功.</p>
+<h3 id="使用外表恢复推荐">使用外表恢复(推荐)</h3>
+<p>由于建表时指定 location 要求建表用户和 location 对应目录的 owner 一致, 这意味着要使用较高权限对 HDFS 中的生产数据进行操作, 这意味着比较大的风险, 且对于一个健全的数据仓库团队来说, 也意味着更复杂的流程.</p>
+<p>一个相对安全的方案是, 在较低权限用户状态下使用外表将待恢复数据导入, 然后在通过 sql 将外表数据 insert 进入正式表, 这一过程中, 仅在重建正式表时涉及到较高权限用户的操作, 并不直接操作HDFS.</p>
+<ol>
+<li>
+<p>将回收站中的数据 <code>cp</code> 到临时位置:</p>
+<pre><code class="language-bash">hdfs dfs -cp /user/hive/.Trash/Current/hive/warehouse/default.db/t_ods_order /tmp/t_ods_order_recover
+</code></pre>
+</li>
+<li>
+<p>连接 hive 创建外表 (指定location为临时位置):</p>
+<pre><code class="language-sql">CREATE EXTERNAL TABLE t_ods_order_recover(
+  serverid decimal(10,0) DEFAULT NULL COMMENT '  ', 
+  ordersno decimal(10,0) DEFAULT NULL COMMENT '  ', 
+  orderdate decimal(10,0) DEFAULT NULL COMMENT '  ', 
+  etl_fl_nm string DEFAULT NULL COMMENT '  ', 
+  ppn_tmstamp timestamp DEFAULT NULL COMMENT '  ', 
+  busi_date DATE DEFAULT NULL COMMENT '  '
+)
+PARTITIONED BY RANGE (busi_date) ( 
+  PARTITION partition_200909 VALUES LESS THAN ('2009-10-01'), 
+  PARTITION partition_200910 VALUES LESS THAN ('2009-11-01'), 
+  PARTITION partition_200911 VALUES LESS THAN ('2009-12-01'), 
+CLUSTERED BY (serverid)
+INTO 6 BUCKETS
+STORED AS ORC
+LOCATION '/tmp/t_ods_order_recover'
+TBLPROPERTIES (&quot;transactional&quot;=&quot;true&quot;);
+;
+</code></pre>
+</li>
+<li>
+<p>使用高权限用户重新创建正式表 (不指定location):</p>
+<pre><code class="language-sql">CREATE TABLE t_ods_order(
+  serverid decimal(10,0) DEFAULT NULL COMMENT '  ', 
+  ordersno decimal(10,0) DEFAULT NULL COMMENT '  ', 
+  orderdate decimal(10,0) DEFAULT NULL COMMENT '  ', 
+  etl_fl_nm string DEFAULT NULL COMMENT '  ', 
+  ppn_tmstamp timestamp DEFAULT NULL COMMENT '  ', 
+  busi_date DATE DEFAULT NULL COMMENT '  '
+)
+PARTITIONED BY RANGE (busi_date) ( 
+  PARTITION partition_200909 VALUES LESS THAN ('2009-10-01'), 
+  PARTITION partition_200910 VALUES LESS THAN ('2009-11-01'), 
+  PARTITION partition_200911 VALUES LESS THAN ('2009-12-01'), 
+CLUSTERED BY (serverid)
+INTO 6 BUCKETS
+STORED AS ORC
+TBLPROPERTIES (&quot;transactional&quot;=&quot;true&quot;);
+;
+</code></pre>
+</li>
+<li>
+<p>从外表向正式表恢复数据:</p>
+</li>
+</ol>
+<!-- more -->
+<!-- more -->
+<!-- more -->
+<pre><code class="language-sql">INSERT INTO TABLE t_ods_order PARTITION (busi_date)
+SELECT * FROM t_ods_order_recover;
+</code></pre>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li>
+<ul>
+<li><a href="#%E5%89%8D%E8%A8%80">前言</a></li>
+<li><a href="#hdfs-trash%E5%8A%9F%E8%83%BD">HDFS Trash功能</a></li>
+<li><a href="#hive-%E8%A1%A8%E6%95%B0%E6%8D%AE%E6%81%A2%E5%A4%8D">Hive 表数据恢复</a>
+<ul>
+<li><a href="#%E5%8E%9F%E8%B7%AF%E5%BE%84%E6%81%A2%E5%A4%8D">原路径恢复</a></li>
+<li><a href="#%E4%BD%BF%E7%94%A8%E5%A4%96%E8%A1%A8%E6%81%A2%E5%A4%8D%E6%8E%A8%E8%8D%90">使用外表恢复(推荐)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+
+        
+          
+            <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+
+<script>
+
+  var gitalk = new Gitalk({
+    clientID: '3e9d2f8f7a8318a76f9f',
+    clientSecret: 'dfbe1187eaf25571547eaad35e0aa9869fc21c41',
+    repo: 'ztyoung86.github.io',
+    owner: 'ztyoung86',
+    admin: ['ztyoung86'],
+    id: (location.pathname).substring(0, 49),      // Ensure uniqueness and length less than 50
+    distractionFreeMode: false  // Facebook-like distraction free mode
+  })
+
+  gitalk.render('gitalk-container')
+
+</script>
+
+          
+
+          
+        
+
+        <div class="site-footer">
+  <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/" style="margin-right: 6">CC BY-SA 4.0</a>2023 © Albert Yang.
+  <a class="rss" href="https://ztyoung.me/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>
